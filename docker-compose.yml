@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  bot:
+    build: .
+    container_name: napominalkin_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    environment:
+      - TZ=Europe/Moscow
+      - TIMEZONE=${TIMEZONE:-Europe/Moscow}
+      - DATABASE_PATH=${DATABASE_PATH:-data/reminders.db}
