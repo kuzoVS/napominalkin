@@ -15,6 +15,7 @@ from bot.handlers import (
     daily_reminder,
     my_reminders
 )
+from bot.services.user_middleware import UserSaveMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,6 +38,8 @@ async def main():
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     dp = Dispatcher()
+
+    dp.update.outer_middleware(UserSaveMiddleware())
     
     dp.include_router(start.router)
     dp.include_router(create_reminder.router)

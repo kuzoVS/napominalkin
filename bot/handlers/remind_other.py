@@ -9,6 +9,7 @@ from bot.services.reminder_service import (
     parse_datetime,
     validate_datetime
 )
+from bot.services.user_service import find_user_by_username
 
 router = Router()
 
@@ -31,12 +32,25 @@ async def process_username(message: Message, state: FSMContext):
     username_or_id = message.text.strip()
     
     target_user_id = None
+    target_username = None
     
     try:
         target_user_id = int(username_or_id)
     except ValueError:
         if username_or_id.startswith("@"):
-            await state.update_data(target_username=username_or_id)
+            user = find_user_by_username(username_or_id)
+            if not user:
+                await message.answer(
+                    "<b>⚠️ Пользователь с таким username не найден в базе</b>\n\n"
+                    "<i>Попроси этого пользователя сначала написать боту,</i>\n"
+                    "<i>а затем попробуй ещё раз.</i>",
+                    reply_markup=get_cancel_keyboard(),
+                    parse_mode="HTML"
+                )
+                return
+            target_user_id = user[0]
+            db_username = user[1]
+            target_username = f"@{db_username}" if db_username else username_or_id
         else:
             await message.answer(
                 "<b>❌ Неверный формат!</b>\n\n"
@@ -47,7 +61,7 @@ async def process_username(message: Message, state: FSMContext):
             return
     
     if target_user_id:
-        await state.update_data(target_user_id=target_user_id)
+        await state.update_data(target_user_id=target_user_id, target_username=target_username)
     
     await state.set_state(RemindOtherStates.waiting_for_text)
     
@@ -129,15 +143,6 @@ async def process_time(message: Message, state: FSMContext):
             "<b>❌ Неверный формат времени!</b>\n\n"
             "<i>Используй формат: HH:MM</i>\n"
             "<i>Например: 14:30</i>",
-            reply_markup=get_cancel_keyboard(),
-            parse_mode="HTML"
-        )
-        return
-    
-    if target_username and not target_user_id:
-        await message.answer(
-            "<b>⚠️ Не удалось найти пользователя по username</b>\n\n"
-            "<i>Используй числовой user_id для надежности</i>",
             reply_markup=get_cancel_keyboard(),
             parse_mode="HTML"
         )

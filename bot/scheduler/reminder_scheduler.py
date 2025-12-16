@@ -11,6 +11,7 @@ from bot.services.reminder_service import (
     get_reminders_to_send,
     schedule_next_daily
 )
+from bot.database.models import get_user, delete_reminder
 
 logger = logging.getLogger(__name__)
 
@@ -42,17 +43,26 @@ async def check_and_send_reminders():
         is_daily = reminder[5]
         
         try:
+            sender_info = ""
             if sender_id:
-                message_text = (
-                    f"<b>💡 Напоминание!</b>\n\n"
-                    f"{text}\n\n"
-                    f"<i>От пользователя</i>"
-                )
-            else:
-                message_text = (
-                    f"<b>💡 Напоминание!</b>\n\n"
-                    f"{text}"
-                )
+                sender = get_user(sender_id)
+                if sender:
+                    sender_username = sender[1]
+                    sender_first_name = sender[2]
+                    if sender_username:
+                        sender_info = f"\n\n<i>От:</i> @{sender_username}"
+                    elif sender_first_name:
+                        sender_info = f"\n\n<i>От:</i> {sender_first_name}"
+                    else:
+                        sender_info = "\n\n<i>От: пользователя</i>"
+                else:
+                    sender_info = "\n\n<i>От: пользователя</i>"
+            
+            message_text = (
+                f"<b>💡 Напоминание!</b>\n\n"
+                f"{text}"
+                f"{sender_info}"
+            )
             
             await bot_instance.send_message(
                 chat_id=user_id,
@@ -66,7 +76,6 @@ async def check_and_send_reminders():
                 schedule_next_daily(reminder_id)
                 logger.info(f"Scheduled next daily reminder {reminder_id}")
             else:
-                from bot.database.models import delete_reminder
                 delete_reminder(reminder_id, user_id)
                 logger.info(f"Deleted one-time reminder {reminder_id}")
             
@@ -88,12 +97,10 @@ async def check_and_send_reminders():
                 except Exception as e:
                     logger.error(f"Failed to notify sender {sender_id}: {e}")
             
-            from bot.database.models import delete_reminder
             delete_reminder(reminder_id, user_id)
             
         except TelegramBadRequest as e:
             logger.error(f"Bad request for reminder {reminder_id}: {e}")
-            from bot.database.models import delete_reminder
             delete_reminder(reminder_id, user_id)
             
         except Exception as e:

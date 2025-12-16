@@ -30,6 +30,20 @@ def get_user(user_id):
     return user
 
 
+def get_user_by_username(username: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    clean = username.lstrip("@").lower()
+    cursor.execute(
+        "SELECT * FROM users WHERE LOWER(username) = ?",
+        (clean,)
+    )
+    user = cursor.fetchone()
+    conn.close()
+    return user
+
+
 def create_reminder(user_id, text, remind_at, sender_id=None, is_daily=False):
     conn = get_connection()
     cursor = conn.cursor()
